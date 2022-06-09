@@ -33,7 +33,7 @@ MAP_SIZE = (800, 600)
 COLOR_POI = ['red', 'orange', 'yellow', 'lime', 'cyan', 'deepskyblue', 'blue', 'purple']
 
 
-DIR_DATA = '../data'
+DIR_DATA = './data/data'
 DIR_ISF = DIR_DATA + '/{}'.format(SCALE)
 DIR_F = DIR_ISF + '/final'
 
@@ -137,7 +137,7 @@ Episode = 100
 MAX_ITER = 100 * SCALE
 
 
-class QLearningAgent:
+class Agent(object):
     def __init__(self, learning_rate=0.001, reward_decay=0.9, epsilon=0.1):
         self.lr = learning_rate
         self.discount_factor = reward_decay
@@ -158,25 +158,9 @@ class QLearningAgent:
         self.reach_n = 0
         # self.now_at = START_P
 
-    def learn(self, state, next_state, reward):
-        current_q = self.q_table[state][next_state]
-        # 贝尔曼方程更新
-        new_q = reward + self.discount_factor * dict_max(self.q_table[next_state])[1]
-        self.q_table[state][next_state] += self.lr * (new_q - current_q)
-
     def get_next_state(self, state):
         return self.v2vs[state]
-
-    def choose_next_state(self, former_state, state):
-        next_states = self.get_next_state(state)
-        if np.random.rand() < self.epsilon:
-            next_state = np.random.choice(next_states)
-        else:
-            next_state = dict_max(self.q_table[state])[0]
-            if next_state == former_state:
-                next_state = np.random.choice(next_states)
-        return next_state
-
+        
     def get_observation(self, former_state, state, next_state):
         reward = 0
         try:
@@ -209,6 +193,26 @@ class QLearningAgent:
     def reset(self):
         self.poi_if_reach = [0 for _ in range(8)]
         self.reach_n = 0
+
+class QLearning(Agent):
+    def __init__(self, learning_rate=0.001, reward_decay=0.9, epsilon=0.1):
+        super().__init__(learning_rate, reward_decay, epsilon)
+
+    def learn(self, state, next_state, reward):
+        current_q = self.q_table[state][next_state]
+        # 贝尔曼方程更新
+        new_q = reward + self.discount_factor * dict_max(self.q_table[next_state])[1]
+        self.q_table[state][next_state] += self.lr * (new_q - current_q)
+
+    def choose_next_state(self, former_state, state):
+        next_states = self.get_next_state(state)
+        if np.random.rand() < self.epsilon:
+            next_state = np.random.choice(next_states)
+        else:
+            next_state = dict_max(self.q_table[state])[0]
+            if next_state == former_state:
+                next_state = np.random.choice(next_states)
+        return next_state
 
 
 class Env(object):
@@ -290,10 +294,10 @@ class Env(object):
 
 
 if __name__ == '__main__':
-    draw_map()
-    quit()
+    # draw_map()
+    # quit()
 
-    ql = QLearningAgent()
+    agent = QLearning()
     env = Env(tk.Tk())
 
     max_iter = MAX_ITER
@@ -304,9 +308,9 @@ if __name__ == '__main__':
         st = START_P
         path.append(st)
         for j in range(max_iter):
-            nst = ql.choose_next_state(fst, st)
-            rwd, if_d = ql.get_observation(fst, st, nst)
-            ql.learn(st, nst, rwd)
+            nst = agent.choose_next_state(fst, st)
+            rwd, if_d = agent.get_observation(fst, st, nst)
+            agent.learn(st, nst, rwd)
             fst = st
             st = nst
             path.append(st)
